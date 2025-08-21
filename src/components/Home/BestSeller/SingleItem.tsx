@@ -2,31 +2,31 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Product } from "@/types/product";
 import { useModalContext } from "@/app/context/QuickViewModalContext";
 import { useDispatch } from "react-redux";
 import { AppDispatch, useAppSelector } from "@/redux/store";
 import { updateQuickView } from "@/redux/features/quickView-slice";
 import { addItemToWishlist } from "@/redux/features/wishlist-slice";
-import { useShoppingCart } from "use-shopping-cart";
+import { addItemToCart } from "@/redux/features/cart-slice";
 import toast from "react-hot-toast";
 import ActionBtn from "./ActionBtn";
+import { Prisma } from "@prisma/client";
 import { formatPrice } from "@/utils/formatePrice";
 
-const SingleItem = ({ item }: { item: Product }) => {
+type ProductWithDetails = Prisma.PromiseReturnType<
+  typeof import("@/get-api-data/product").getBestSellingProducts
+>[0];
+
+const SingleItem = ({ item }: { item: ProductWithDetails }) => {
   const defaultVariant = item?.productVariants.find(
     (variant) => variant.isDefault
   );
   const { openModal } = useModalContext();
   const dispatch = useDispatch<AppDispatch>();
-  const { addItem, cartDetails } = useShoppingCart();
+  const { cartItems } = useAppSelector((state) => state.cart);
   const wishlistItems = useAppSelector((state) => state.wishlistReducer.items);
 
-  const isAlradyAdded = Object.values(cartDetails ?? {}).some(
-    (cartItem) => cartItem.id === item.id
-  )
-    ? true
-    : false;
+  const isAlradyAdded = cartItems.some((cartItem) => cartItem.id === item.id);
 
   const isAlradyWishListed = Object.values(wishlistItems ?? {}).some(
     (wishlistItem) => wishlistItem.id === item.id
@@ -63,8 +63,19 @@ const SingleItem = ({ item }: { item: Product }) => {
   // add to cart
   const handleAddToCart = () => {
     if (item.quantity > 0) {
-      // @ts-ignore
-      addItem(cartItem);
+      dispatch(
+        addItemToCart({
+          id: item.id,
+          title: item.title,
+          slug: item.slug,
+          image: defaultVariant?.image || "",
+          price: item.discountedPrice?.toNumber() || item.price.toNumber(),
+          quantity: 1, // Add one item at a time
+          availableQuantity: item.quantity,
+          color: defaultVariant?.color || "",
+          size: defaultVariant?.size || "",
+        })
+      );
       toast.success("Product added to cart!");
     } else {
       toast.error("This product is out of stock!");
@@ -90,7 +101,7 @@ const SingleItem = ({ item }: { item: Product }) => {
       <div className="relative overflow-hidden rounded-xl bg-[#F6F7FB] min-h-[403px]">
         <div className="text-center px-4 py-7.5">
           <h3 className="font-semibold text-lg text-dark ease-out duration-200 hover:text-blue mb-1.5">
-            <Link href={`/products/${item?.slug}`}>{item.title}</Link>
+            <Link href={`/product/${item?.slug}`}>{item.title}</Link>
           </h3>
 
           <span className="flex items-center justify-center gap-2 text-base font-medium">
@@ -105,9 +116,9 @@ const SingleItem = ({ item }: { item: Product }) => {
           </span>
         </div>
         <div className="flex items-center justify-center">
-          <Link href={`/products/${item?.slug}`}>
+          <Link href={`/product/${item?.slug}`}>
             <Image
-              src={defaultVariant?.image ? defaultVariant.image : ""}
+              src={defaultVariant?.image || ""}
               alt={item.title || "product-image"}
               width={280}
               height={280}
