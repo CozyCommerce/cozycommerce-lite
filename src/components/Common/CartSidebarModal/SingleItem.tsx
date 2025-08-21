@@ -1,36 +1,44 @@
 import { TrashIcon } from "@/assets/icons";
 import Image from "next/image";
-import { useShoppingCart } from "use-shopping-cart";
 import { useRouter } from "next/navigation";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "@/redux/store";
+import { removeFromCart } from "@/redux/features/cart-slice";
+import { closeCartSidebar } from "@/redux/features/ui-slice";
+import { CartItem } from "@/redux/features/cart-slice";
+import { formatPrice } from "@/utils/formatePrice";
 
-const SingleItem = ({ item }: any) => {
-  const { removeItem,handleCartClick } = useShoppingCart();
+interface SingleItemProps {
+    item: CartItem;
+}
+
+const SingleItem = ({ item }: SingleItemProps) => {
+  const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
+
   const handleRemoveFromCart = () => {
-    removeItem(item.id);
+    dispatch(removeFromCart(item.id));
   };
 
   const handleProductClick = () => {
-    router.push(`/products/${item.slug}`);
-    setTimeout(() => {
-      handleCartClick();
-    }, 500);
+    router.push(`/product/${item.slug}`);
+    dispatch(closeCartSidebar());
   };  
 
   return (
     <div className="flex items-center justify-between gap-5">
       <div className="flex items-center w-full gap-6">
         <div className="flex items-center justify-center rounded-[10px] bg-gray-3 w-22.5 h-22.5 shrink-0">
-          <Image src={item.image} alt="product" width={64} height={64} />
+          <Image src={item.image} alt={item.title} width={64} height={64} />
         </div>
 
         <div>
           <h3 className="mb-1 text-base font-medium duration-200 ease-out text-dark hover:text-blue">
             <button onClick={handleProductClick} className="text-start">
-              {item.name} ({item.quantity})
+              {item.title} (x{item.quantity})
             </button>
           </h3>
-          <p className="font-normal text-custom-sm">Price: ${item.price}</p>
+          <p className="font-normal text-custom-sm">Price: {formatPrice(item.price)}</p>
         </div>
       </div>
 

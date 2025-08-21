@@ -17,15 +17,14 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useDispatch } from "react-redux";
-import { useShoppingCart } from "use-shopping-cart";
 import ReviewStar from "../Shop/ReviewStar";
+import { addItemToCart } from "@/redux/features/cart-slice";
 
 const QuickViewModal = () => {
   const { isModalOpen, closeModal } = useModalContext();
   const { openPreviewModal } = usePreviewSlider();
   const [quantity, setQuantity] = useState(1);
   const dispatch = useDispatch<AppDispatch>();
-  const { addItem } = useShoppingCart();
   const [avgRating, setAvgRating] = useState(0);
   const [totalRating, setTotalRating] = useState(0);
   const [loading, setLoading] = useState<boolean>(true);
@@ -51,22 +50,23 @@ const QuickViewModal = () => {
 
   // add to cart
   const handleAddToCart = () => {
-    const cartItem = {
-      id: product.id,
-      name: product.title,
-      price: product.discountedPrice ? product.discountedPrice : product.price,
-      currency: "usd",
-      image: defaultVariant?.image ? defaultVariant.image : "",
-      price_id: null,
-      slug: product?.slug,
-      availableQuantity: product.quantity,
-      color: defaultVariant?.color ? defaultVariant.color : "",
-      size: defaultVariant?.size ? defaultVariant.size : "",
-    };
     if (product.quantity > 0) {
-      // @ts-ignore
-      addItem(cartItem);
-      toast.success("Product added to cart!");
+      dispatch(
+        addItemToCart({
+          id: product.id,
+          title: product.title,
+          slug: product.slug,
+          image: defaultVariant?.image || "",
+          price: product.discountedPrice
+            ? product.discountedPrice
+            : product.price,
+          quantity: quantity, // Use the state quantity
+          availableQuantity: product.quantity,
+          color: defaultVariant?.color || "",
+          size: defaultVariant?.size || "",
+        })
+      );
+      toast.success(`${quantity} ${product.title} added to cart!`);
       closeModal();
     } else {
       toast.error("This product is out of stock!");
@@ -317,7 +317,7 @@ const QuickViewModal = () => {
                   <div className="flex flex-wrap items-center gap-4">
                     <button
                       disabled={quantity < 1 || product.quantity < 1}
-                      onClick={() => handleAddToCart()}
+                      onClick={handleAddToCart}
                       className="inline-flex py-3 font-medium text-white duration-200 ease-out rounded-lg bg-blue px-7 hover:bg-blue-dark"
                     >
                       {product.quantity > 0 ? "Add to Cart" : "Out of Stock"}

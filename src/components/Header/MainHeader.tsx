@@ -2,9 +2,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useShoppingCart } from "use-shopping-cart";
 import { menuData } from "./menuData";
 import MobileMenu from "./MobileMenu";
+import { useDispatch } from "react-redux";
+import { toggleCartSidebar } from "@/redux/features/ui-slice";
 import DesktopMenu from "./DesktopMenu";
 import {
   SearchIcon,
@@ -15,7 +16,7 @@ import {
   CloseIcon,
 } from "./icons";
 import { HeaderSetting } from "@prisma/client";
-import { useAppSelector } from "@/redux/store";
+import { AppDispatch, useAppSelector } from "@/redux/store";
 
 type IProps = {
   headerData?: HeaderSetting | null;
@@ -25,12 +26,16 @@ const MainHeader = ({ headerData }: IProps) => {
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [stickyMenu, setStickyMenu] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
-  const { handleCartClick, cartCount, totalPrice } = useShoppingCart();
+
+  const dispatch = useDispatch<AppDispatch>();
+  const { cartItems } = useAppSelector((state) => state.cart);
+  const cartCount = cartItems.length;
+
   const wishlistCount = useAppSelector((state) => state.wishlistReducer).items
     ?.length;
 
   const handleOpenCartModal = () => {
-    handleCartClick();
+    dispatch(toggleCartSidebar());
   };
 
   // Sticky menu

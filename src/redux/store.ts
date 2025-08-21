@@ -7,12 +7,15 @@ import productDetailsReducer from "./features/product-details";
 
 import { TypedUseSelectorHook, useSelector } from "react-redux";
 
+import uiReducer from "./features/ui-slice";
+
 export const store = configureStore({
   reducer: {
     quickViewReducer,
     cartReducer,
     wishlistReducer,
     productDetailsReducer,
+    ui: uiReducer,
   },
 });
 
