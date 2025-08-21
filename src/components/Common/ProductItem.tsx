@@ -3,70 +3,69 @@ import { useModalContext } from "@/app/context/QuickViewModalContext";
 import { EyeIcon } from "@/assets/icons";
 import { updateQuickView } from "@/redux/features/quickView-slice";
 import { addItemToWishlist } from "@/redux/features/wishlist-slice";
-import { AppDispatch } from "@/redux/store";
-import { Product } from "@/types/product";
+import { addItemToCart } from "@/redux/features/cart-slice";
+import { AppDispatch, useAppSelector } from "@/redux/store";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import toast from "react-hot-toast";
 import { useDispatch } from "react-redux";
-import { useShoppingCart } from "use-shopping-cart";
 import CheckoutBtn from "../Shop/CheckoutBtn";
 import WishlistButton from "../Wishlist/AddWishlistButton";
 import { formatPrice } from "@/utils/formatePrice";
 import Tooltip from "./Tooltip";
 import { calculateDiscountPercentage } from "@/utils/calculateDiscountPercentage";
+import { Prisma } from "@prisma/client";
+
+// Using inferred type for consistency
+type ProductWithDetails = Prisma.PromiseReturnType<
+  typeof import("@/get-api-data/product").getNewArrivalsProduct
+>[0];
 
 type Props = {
   bgClr?: string;
-  item: Product;
+  item: ProductWithDetails;
 };
-// add updated the type here
+
 const ProductItem = ({ item, bgClr = "[#F6F7FB]" }: Props) => {
   const defaultVariant = item?.productVariants.find(
     (variant) => variant.isDefault
   );
   const { openModal } = useModalContext();
-  // const [product, setProduct] = useState({});
   const dispatch = useDispatch<AppDispatch>();
+  const cartItems = useAppSelector((state) => state.cart.cartItems);
 
-  const { addItem, cartDetails } = useShoppingCart();
-
-  const pathUrl = usePathname();
-
-  const isAlradyAdded = Object.values(cartDetails ?? {}).some(
-    (cartItem) => cartItem.id === item.id
-  );
-
-  const cartItem = {
-    id: item.id,
-    name: item.title,
-    price: item.discountedPrice ? item.discountedPrice : item.price,
-    currency: "usd",
-    image: defaultVariant?.image ? defaultVariant.image : "",
-    slug: item?.slug,
-    availableQuantity: item.quantity,
-    color: defaultVariant?.color ? defaultVariant.color : "",
-    size: defaultVariant?.size ? defaultVariant.size : "",
-  };
+  const isAlreadyAdded = cartItems.some((cartItem) => cartItem.id === item.id);
 
   // update the QuickView state
   const handleQuickViewUpdate = () => {
+    // We need to handle potential non-serializable data if we dispatch the whole item
+    // For now, we can create a serializable version or dispatch only necessary fields
     const serializableItem = {
       ...item,
-      updatedAt:
-        item.updatedAt instanceof Date
-          ? item.updatedAt.toISOString()
-          : item.updatedAt, // ✅ Convert Date to ISO string
+      price: item.price.toString(), // Convert Decimal to string
+      discountedPrice: item.discountedPrice?.toString() ?? null,
+      updatedAt: item.updatedAt.toISOString(),
+      reviews: item.reviews || 0,
     };
     dispatch(updateQuickView(serializableItem));
   };
 
   // add to cart
-  const handleAddToCart = (item: Product) => {
+  const handleAddToCart = () => {
     if (item.quantity > 0) {
-      // @ts-ignore
-      addItem(cartItem);
+      dispatch(
+        addItemToCart({
+          id: item.id,
+          title: item.title,
+          slug: item.slug,
+          image: defaultVariant?.image || "",
+          price: item.discountedPrice?.toNumber() || item.price.toNumber(),
+          quantity: 1, // Add one item at a time
+          availableQuantity: item.quantity,
+          color: defaultVariant?.color || "",
+          size: defaultVariant?.size || "",
+        })
+      );
       toast.success("Product added to cart!");
     } else {
       toast.error("This product is out of stock!");
@@ -79,10 +78,10 @@ const ProductItem = ({ item, bgClr = "[#F6F7FB]" }: Props) => {
         id: item.id,
         title: item.title,
         slug: item.slug,
-        image: defaultVariant?.image ? defaultVariant.image : "",
-        price: item.discountedPrice ? item.discountedPrice : item.price,
+        image: defaultVariant?.image || "",
+        price: item.discountedPrice?.toNumber() || item.price.toNumber(),
         quantity: item.quantity,
-        color: defaultVariant?.color ? defaultVariant.color : "",
+        color: defaultVariant?.color || "",
       })
     );
   };
@@ -92,15 +91,9 @@ const ProductItem = ({ item, bgClr = "[#F6F7FB]" }: Props) => {
       <div
         className={`relative overflow-hidden border border-gray-3 flex items-center justify-center rounded-xl bg-${bgClr} min-h-[270px] mb-4`}
       >
-        <Link
-          href={`${
-            pathUrl.includes("products")
-              ? `${item?.slug}`
-              : `products/${item?.slug}`
-          }`}
-        >
+        <Link href={`/product/${item.slug}`}>
           <Image
-            src={defaultVariant?.image ? defaultVariant.image : ""}
+            src={defaultVariant?.image || "/images/products/product-1-bg-1.png"}
             alt={item.title || "product-image"}
             width={250}
             height={250}
@@ -111,10 +104,13 @@ const ProductItem = ({ item, bgClr = "[#F6F7FB]" }: Props) => {
             <span className="px-2 py-1 text-xs font-medium text-white bg-red-500 rounded-full">
               Out of Stock
             </span>
-          ) : item?.discountedPrice && item?.discountedPrice > 0 ? (
+          ) : item?.discountedPrice && item.discountedPrice.gt(0) ? (
             <span className="px-2 py-1 text-xs font-medium text-white rounded-full bg-blue">
-              {calculateDiscountPercentage(item.discountedPrice, item.price)}%
-              OFF
+              {calculateDiscountPercentage(
+                item.discountedPrice.toNumber(),
+                item.price.toNumber()
+              )}
+              % OFF
             </span>
           ) : null}
         </div>
@@ -132,11 +128,11 @@ const ProductItem = ({ item, bgClr = "[#F6F7FB]" }: Props) => {
             </button>
           </Tooltip>
 
-          {isAlradyAdded ? (
+          {isAlreadyAdded ? (
             <CheckoutBtn />
           ) : (
             <button
-              onClick={() => handleAddToCart(item)}
+              onClick={handleAddToCart}
               disabled={item.quantity < 1}
               className="inline-flex px-5 py-2 font-medium h-[38px] text-white duration-200 ease-out rounded-lg text-custom-sm bg-blue hover:bg-blue-dark"
             >
@@ -152,26 +148,19 @@ const ProductItem = ({ item, bgClr = "[#F6F7FB]" }: Props) => {
       </div>
 
       <h3 className="font-semibold text-dark ease-out text-base duration-200 hover:text-blue mb-1.5 line-clamp-1">
-        <Link
-          href={`${
-            pathUrl.includes("products")
-              ? `${item?.slug}`
-              : `products/${item?.slug}`
-          }`}
-        >
-          {" "}
-          {item.title}{" "}
-        </Link>
+        <Link href={`/product/${item.slug}`}> {item.title} </Link>
       </h3>
 
       <span className="flex items-center gap-2 text-base font-medium">
-        {item.discountedPrice && (
+        {item.discountedPrice && item.discountedPrice.gt(0) && (
           <span className="line-through text-dark-4">
-            {formatPrice(item.price)}
+            {formatPrice(item.price.toNumber())}
           </span>
         )}
         <span className="text-dark">
-          {formatPrice(item.discountedPrice || item.price)}
+          {formatPrice(
+            item.discountedPrice?.toNumber() || item.price.toNumber()
+          )}
         </span>
       </span>
     </div>

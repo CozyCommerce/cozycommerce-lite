@@ -1,9 +1,15 @@
 import ProductItem from "@/components/Common/ProductItem";
 import NewArrivalTitle from "./NewArrivalTitle";
-import { getNewArrivalsProduct } from "@/get-api-data/product";
+import { Prisma } from "@prisma/client";
 
-const NewArrival = async () => {
-  const newProducts = await getNewArrivalsProduct();
+// Re-using the inferred type
+type ProductWithDetails = Prisma.PromiseReturnType<typeof import('@/get-api-data/product').getNewArrivalsProduct>[0];
+
+interface NewArrivalProps {
+  newProducts: ProductWithDetails[];
+}
+
+const NewArrival = ({ newProducts }: NewArrivalProps) => {
   return (
     <section className="overflow-hidden pt-15">
       <div className="max-w-7xl w-full mx-auto px-4 sm:px-8 xl:px-0">
