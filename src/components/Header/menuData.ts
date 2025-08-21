@@ -7,7 +7,7 @@ export const menuData: MenuItem[] = [
   },
   {
     title: "Shop",
-    path: "/shop-with-sidebar",
+    path: "/shop",
   },
 
   {

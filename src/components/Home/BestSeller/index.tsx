@@ -1,19 +1,24 @@
 import Link from "next/link";
 import BestSellerSectionTitle from "./BestSellerSectionTitle";
 import SingleItem from "./SingleItem";
-import { getBestSellingProducts } from "@/get-api-data/product";
+import { Prisma } from "@prisma/client";
 
-const BestSeller = async () => {
-  const bestSellProducts = await getBestSellingProducts();
+// Re-using the inferred type
+type ProductWithDetails = Prisma.PromiseReturnType<typeof import('@/get-api-data/product').getBestSellingProducts>[0];
 
+interface BestSellerProps {
+  bestSellingProducts: ProductWithDetails[];
+}
+
+const BestSeller = ({ bestSellingProducts }: BestSellerProps) => {
   return (
     <section className="overflow-hidden">
       <div className="w-full px-4 mx-auto max-w-7xl sm:px-8 xl:px-0">
         <BestSellerSectionTitle />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7.5">
-          {bestSellProducts.length > 0 &&
-            bestSellProducts.map((item, key) => (
+          {bestSellingProducts.length > 0 &&
+            bestSellingProducts.map((item, key) => (
               <SingleItem item={item} key={key} />
             ))}
         </div>

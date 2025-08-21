@@ -7,15 +7,24 @@ import FooterFeature from "./Hero/FooterFeature";
 import NewArrival from "./NewArrivals";
 import PromoBanner from "./PromoBanner";
 import Testimonials from "./Testimonials";
+import { Prisma } from "@prisma/client";
 
-const Home = () => {
+// Infer the type from the Prisma call's return value
+type ProductWithDetails = Prisma.PromiseReturnType<typeof import('@/get-api-data/product').getNewArrivalsProduct>[0];
+
+interface HomeProps {
+  newProducts: ProductWithDetails[];
+  bestSellingProducts: ProductWithDetails[];
+}
+
+const Home = ({ newProducts, bestSellingProducts }: HomeProps) => {
   return (
     <main>
       <Hero />
       <Categories />
-      <NewArrival />
+      <NewArrival newProducts={newProducts} />
       <PromoBanner />
-      <BestSeller />
+      <BestSeller bestSellingProducts={bestSellingProducts} />
       <CountDown />
       <Testimonials />
       <Newsletter />

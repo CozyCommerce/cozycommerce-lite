@@ -1,3 +1,6 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -5,4 +8,227 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// ENUMS
+enum Role {
+  USER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELED
+}
+
+// MODELS
+
+// Authentication models for NextAuth.js
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Application Models
+model User {
+  id             String    @id @default(cuid())
+  name           String?
+  email          String?   @unique
+  emailVerified  DateTime?
+  hashedPassword String?
+  image          String?
+  role           Role      @default(USER)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+  orders   Order[]
+  reviews  Review[]
+  addresses Address[]
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  title     String    @unique
+  slug      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  products Product[]
+}
+
+model Product {
+  id                 String    @id @default(cuid())
+  title              String
+  shortDescription   String?
+  description        String?   @db.Text
+  price              Decimal   @db.Decimal(10, 2)
+  discountedPrice    Decimal?  @db.Decimal(10, 2)
+  slug               String    @unique
+  quantity           Int       @default(0)
+  isApproved         Boolean   @default(true)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  tags                String[]
+  sku                 String?
+  offers              Json?
+  body                Json?
+
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  orderItems OrderItem[]
+  reviews    Review[]
+  productVariants ProductVariant[]
+  additionalInformation AdditionalInformation[]
+  customAttributes CustomAttribute[]
+}
+
+model ProductVariant {
+  id        String   @id @default(cuid())
+  image     String
+  color     String?
+  size      String?
+  isDefault Boolean  @default(false)
+
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+
+model AdditionalInformation {
+  id          String @id @default(cuid())
+  name        String
+  description String
+  productId   String
+  product     Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model CustomAttribute {
+  id               String @id @default(cuid())
+  attributeName    String
+  productId        String
+  product          Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  attributeValues  AttributeValue[]
+}
+
+model AttributeValue {
+  id                String @id @default(cuid())
+  title             String
+  customAttributeId String
+  customAttribute   CustomAttribute @relation(fields: [customAttributeId], references: [id], onDelete: Cascade)
+}
+
+model Order {
+  id        String      @id @default(cuid())
+  total     Decimal     @db.Decimal(10, 2)
+  status    OrderStatus @default(PENDING)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  addressId String
+  address   Address  @relation(fields: [addressId], references: [id])
+
+  items OrderItem[]
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  quantity  Int
+  price     Decimal  @db.Decimal(10, 2) // Price at the time of purchase
+  createdAt DateTime @default(now())
+
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  ratings    Int
+  comment    String   @db.Text
+  isApproved Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Adding fields from the old schema just in case
+  name       String?
+  email      String?
+
+  @@unique([userId, productId])
+}
+
+model Address {
+  id        String   @id @default(cuid())
+  street    String
+  city      String
+  state     String
+  zipCode   String
+  country   String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  Order Order[]
+}
+
+model SiteSettings {
+  id       String @id @default(cuid())
+  // Use a unique key to ensure only one settings row exists
+  uniqueKey String @unique @default("global_settings")
+
+  currency String @default("EGP") // Default to EGP as requested
+
+  // Footer settings can be added here later
+  footerContent Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
