@@ -6,3 +6,410 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// User & Authentication
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          UserRole  @default(CUSTOMER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  orders        Order[]
+  reviews       Review[]
+  cart          Cart?
+  addresses     Address[]
+  wishlist      Wishlist[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Products & Categories
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  title       String    // Alias for name
+  slug        String    @unique
+  description String?   @db.Text
+  image       String?
+  img         String?   // Alias for image
+  parentId    String?
+  parent      Category? @relation("SubCategories", fields: [parentId], references: [id])
+  children    Category[] @relation("SubCategories")
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  title       String   // Alias for name (for backward compatibility)
+  slug        String   @unique
+  description String   @db.Text
+  shortDescription String @db.Text // Short version of description
+  price       Float
+  comparePrice Float?
+  discountedPrice Float? // Alias for comparePrice
+  costPrice   Float?
+  sku         String?  @unique
+  barcode     String?
+  quantity    Int      @default(0)
+  trackInventory Boolean @default(true)
+
+  // Media
+  images      String[]
+  thumbnail   String?
+
+  // Organization
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id])
+  tags        String[]
+
+  // Status
+  status      ProductStatus @default(DRAFT)
+  featured    Boolean @default(false)
+
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  publishedAt DateTime?
+
+  // Relations
+  orderItems  OrderItem[]
+  reviews     Review[]
+  cartItems   CartItem[]
+  wishlist    Wishlist[]
+  productVariants ProductVariant[]
+
+  @@index([categoryId])
+  @@index([status])
+  @@index([featured])
+  @@index([slug])
+}
+
+model ProductVariant {
+  id        String @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  name      String
+  sku       String? @unique
+  price     Float
+  quantity  Int     @default(0)
+  image     String
+  color     String  // For variant color
+  size      String  // For variant size
+  isDefault Boolean @default(false) // Default variant to show
+
+  options   Json // { "size": "Large", "color": "Blue" }
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Shopping Cart
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cartId, productId])
+}
+
+// Wishlist
+model Wishlist {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+}
+
+// Orders
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique
+  userId          String
+  user            User        @relation(fields: [userId], references: [id])
+  
+  // Pricing
+  subtotal        Float
+  tax             Float       @default(0)
+  shipping        Float       @default(0)
+  discount        Float       @default(0)
+  total           Float
+  
+  // Status
+  status          OrderStatus @default(PENDING)
+  paymentStatus   PaymentStatus @default(PENDING)
+  fulfillmentStatus FulfillmentStatus @default(UNFULFILLED)
+  
+  // Payment
+  paymentMethod   String?
+  paymentIntentId String?
+  
+  // Shipping
+  shippingAddress Json
+  billingAddress  Json?
+  trackingNumber  String?
+  shippingCarrier String?
+  
+  // Additional Info
+  customerNote    String?     @db.Text
+  internalNote    String?     @db.Text
+  
+  // Relations
+  items           OrderItem[]
+  
+  // Timestamps
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  paidAt          DateTime?
+  shippedAt       DateTime?
+  deliveredAt     DateTime?
+  cancelledAt     DateTime?
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  
+  quantity  Int
+  price     Float
+  total     Float
+  
+  // Snapshot of product at time of order
+  productSnapshot Json
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Reviews & Ratings
+model Review {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productSlug String // For efficient querying by slug
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  rating    Int      // 1-5 (stored as 'ratings' for compatibility)
+  ratings   Int      // Alias for rating field
+  title     String?
+  comment   String?  @db.Text
+  verified  Boolean  @default(false)
+  helpful   Int      @default(0)
+
+  status    ReviewStatus @default(PENDING)
+  isApproved Boolean @default(false) // Computed: true when status = APPROVED
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([productId, userId])
+  @@index([productSlug])
+  @@index([isApproved])
+}
+
+// Address Book
+model Address {
+  id          String  @id @default(cuid())
+  userId      String
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  firstName   String
+  lastName    String
+  company     String?
+  address1    String
+  address2    String?
+  city        String
+  state       String
+  zipCode     String
+  country     String
+  phone       String?
+  
+  isDefault   Boolean @default(false)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// CMS & Site Settings
+model HeaderSetting {
+  id          String   @id @default(cuid())
+  headerLogo  String?
+  logoText    String   @default("CozyCommerce")
+  headerText  String   @default("Get free delivery on orders over $100")
+  phone       String?
+  email       String?
+  socialLinks Json?    // { facebook, twitter, instagram, etc. }
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model FooterSetting {
+  id            String   @id @default(cuid())
+  about         String?  @db.Text
+  copyright     String   @default("© 2025 CozyCommerce. All rights reserved.")
+  socialLinks   Json?
+  paymentMethods Json?  // Array of payment method icons/names
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Page {
+  id          String      @id @default(cuid())
+  title       String
+  slug        String      @unique
+  content     String      @db.Text
+  status      PageStatus  @default(DRAFT)
+  seoTitle    String?
+  seoDescription String?  @db.Text
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  publishedAt DateTime?
+}
+
+model Banner {
+  id          String       @id @default(cuid())
+  title       String
+  subtitle    String?
+  image       String
+  link        String?
+  buttonText  String?
+  position    Int          @default(0)
+  status      BannerStatus @default(ACTIVE)
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Newsletter {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Enums
+enum UserRole {
+  CUSTOMER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum FulfillmentStatus {
+  UNFULFILLED
+  PARTIALLY_FULFILLED
+  FULFILLED
+  RETURNED
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PageStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum BannerStatus {
+  ACTIVE
+  INACTIVE
+}

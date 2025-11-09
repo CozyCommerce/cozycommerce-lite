@@ -1,15 +1,19 @@
-
+import { Product as PrismaProduct, ProductVariant as PrismaProductVariant, Category as PrismaCategory, ProductStatus } from '@prisma/client';
 
 export type Product = {
   id: string;
-  title: string;
+  title: string; // Mapped from name
+  name?: string;
   price: number;
-  discountedPrice?: number | null;
+  discountedPrice?: number | null; // Mapped from comparePrice
+  comparePrice?: number | null;
   slug: string;
   quantity: number;
   updatedAt: Date;
-  reviews: number;
-  shortDescription: string;
+  reviews: number; // Computed field
+  shortDescription: string; // Mapped from description (truncated)
+  description?: string;
+  status?: ProductStatus;
   productVariants: {
     color: string;
     image: string;
