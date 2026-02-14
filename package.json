@@ -31,7 +31,7 @@
     "clsx": "^2.1.1",
     "dayjs": "^1.11.13",
     "dotenv": "^17.2.3",
-    "next": "16.0.10",
+    "next": "16.1.6",
     "next-auth": "^4.24.13",
     "next-share": "^0.27.0",
     "nextjs-toploader": "^1.6.12",
