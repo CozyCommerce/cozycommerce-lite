@@ -52,7 +52,7 @@
     "stripe": "^14.8.0",
     "styled-components": "^6.1.15",
     "sweetalert2": "^11.17.2",
-    "swiper": "^11.0.7",
+    "swiper": "^12.1.2",
     "tailwind-merge": "^3.0.1"
   },
   "devDependencies": {
