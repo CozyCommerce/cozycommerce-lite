@@ -27,7 +27,7 @@
     "bcrypt": "^5.1.1",
     "chart.js": "^4.4.8",
     "cheerio": "^1.0.0-rc.12",
-    "cloudinary": "^2.5.1",
+    "cloudinary": "^2.7.0",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.13",
     "dotenv": "^17.2.3",
