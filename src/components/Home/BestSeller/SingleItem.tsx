@@ -1,17 +1,16 @@
 "use client";
-import React from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { Product } from "@/types/product";
 import { useModalContext } from "@/app/context/QuickViewModalContext";
-import { useDispatch } from "react-redux";
-import { AppDispatch, useAppSelector } from "@/redux/store";
+import { useCart } from "@/hooks/useCart";
 import { updateQuickView } from "@/redux/features/quickView-slice";
 import { addItemToWishlist } from "@/redux/features/wishlist-slice";
-import { useCart } from "@/hooks/useCart";
-import toast from "react-hot-toast";
-import ActionBtn from "./ActionBtn";
+import { AppDispatch, useAppSelector } from "@/redux/store";
+import { Product } from "@/types/product";
 import { formatPrice } from "@/utils/formatePrice";
+import Image from "next/image";
+import Link from "next/link";
+import toast from "react-hot-toast";
+import { useDispatch } from "react-redux";
+import ActionBtn from "./ActionBtn";
 
 const SingleItem = ({ item }: { item: Product }) => {
   const defaultVariant = item?.productVariants.find(
@@ -111,6 +110,7 @@ const SingleItem = ({ item }: { item: Product }) => {
               alt={item.title || "product-image"}
               width={280}
               height={280}
+              style={{ width: "auto", height: "auto" }}
             />
           </Link>
         </div>

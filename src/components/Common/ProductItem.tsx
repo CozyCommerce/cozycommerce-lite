@@ -1,21 +1,21 @@
 "use client";
 import { useModalContext } from "@/app/context/QuickViewModalContext";
 import { EyeIcon } from "@/assets/icons";
+import { useCart } from "@/hooks/useCart";
 import { updateQuickView } from "@/redux/features/quickView-slice";
 import { addItemToWishlist } from "@/redux/features/wishlist-slice";
 import { AppDispatch } from "@/redux/store";
 import { Product } from "@/types/product";
+import { calculateDiscountPercentage } from "@/utils/calculateDiscountPercentage";
+import { formatPrice } from "@/utils/formatePrice";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import toast from "react-hot-toast";
 import { useDispatch } from "react-redux";
-import { useCart } from "@/hooks/useCart";
 import CheckoutBtn from "../Shop/CheckoutBtn";
 import WishlistButton from "../Wishlist/AddWishlistButton";
-import { formatPrice } from "@/utils/formatePrice";
 import Tooltip from "./Tooltip";
-import { calculateDiscountPercentage } from "@/utils/calculateDiscountPercentage";
 
 type Props = {
   bgClr?: string;
@@ -103,6 +103,7 @@ const ProductItem = ({ item, bgClr = "[#F6F7FB]" }: Props) => {
             alt={item.title || "product-image"}
             width={250}
             height={250}
+            style={{ width: "auto", height: "auto" }}
           />
         </Link>
         <div className="absolute top-2 right-2">
