@@ -23,7 +23,7 @@
     "@stripe/stripe-js": "^3.1.0",
     "@tippyjs/react": "^4.2.6",
     "algoliasearch": "^4.23.3",
-    "axios": "^1.13.4",
+    "axios": "^1.15.2",
     "bcrypt": "^6.0.0",
     "chart.js": "^4.4.8",
     "cheerio": "^1.0.0-rc.12",
