@@ -158,6 +158,9 @@ Need help? Feel free to reach out or open an issue on the [GitHub repository](ht
 
 ## Update Logs
 
+Version 1.4.1 - Enhancements - [Nov 15, 2026]
+- upgrade dependencies
+
 Version 1.4.0 - Enhancements - [Mar 16, 2026]
 
 - upgrade dependencies, refactor Prisma configuration, apply consistent image styling
